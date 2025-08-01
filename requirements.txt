@@ -1,8 +1,10 @@
 pypdf
 torch
 langchain
+langchain-community
 accelerate
 bitsandbytes
 transformers
 sentence_transformers
 faiss_cpu
+chainlit

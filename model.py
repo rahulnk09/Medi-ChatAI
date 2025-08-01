@@ -1,9 +1,11 @@
-from langchain import PromptTemplate
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.llms import CTransformers
+from langchain_core.prompts import PromptTemplate
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.llms import HuggingFacePipeline
 from langchain.chains import RetrievalQA
 import chainlit as cl
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+import torch
 
 DB_FAISS_PATH='vectorstores/db_faiss'
 
@@ -27,13 +29,65 @@ def set_custom_prompt():
     return prompt
 
 def load_llm():
-    llm=CTransformers(
-        model='llama-2-7b-chat.ggmlv3.q3_K_M.bin',
-        model_type="llama",
-        max_new_tokens=512,
-        temperature=0.1
-    )
-    return llm
+    """
+    Load Gemma model using HuggingFace Transformers
+    Falls back to a lightweight model if Gemma is not available
+    """
+    # Primary model: Gemma 2B instruction-tuned
+    model_name = "google/gemma-2b-it"
+    
+    # Fallback models for testing/offline scenarios
+    fallback_models = [
+        "microsoft/DialoGPT-medium",  # Smaller model for testing
+        "gpt2"  # Most basic fallback
+    ]
+    
+    # Configure device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    # Try to load the primary model, then fallbacks
+    models_to_try = [model_name] + fallback_models
+    
+    for current_model in models_to_try:
+        try:
+            print(f"Attempting to load model: {current_model}")
+            
+            # Load tokenizer and model
+            tokenizer = AutoTokenizer.from_pretrained(current_model)
+            
+            # Add pad token if it doesn't exist
+            if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token
+            
+            model = AutoModelForCausalLM.from_pretrained(
+                current_model,
+                torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+                device_map="auto" if device == "cuda" else None,
+                trust_remote_code=True
+            )
+            
+            # Create pipeline
+            pipe = pipeline(
+                "text-generation",
+                model=model,
+                tokenizer=tokenizer,
+                max_new_tokens=512,
+                temperature=0.1,
+                do_sample=True,
+                device=0 if device == "cuda" else -1,
+                pad_token_id=tokenizer.eos_token_id
+            )
+            
+            # Wrap in LangChain HuggingFacePipeline
+            llm = HuggingFacePipeline(pipeline=pipe)
+            print(f"✓ Successfully loaded model: {current_model}")
+            return llm
+            
+        except Exception as e:
+            print(f"✗ Failed to load {current_model}: {str(e)}")
+            if current_model == models_to_try[-1]:  # Last model in list
+                raise Exception(f"Failed to load any model. Last error: {str(e)}")
+            continue
 
 def retrieval_qa_chain(llm,prompt,db):
     qa_chain=RetrievalQA.from_chain_type(

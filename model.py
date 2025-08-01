@@ -28,7 +28,7 @@ def set_custom_prompt():
 
 def load_llm():
     llm=CTransformers(
-        model='llama-2-7b-chat.ggmlv3.q3_K_M.bin',
+        model='llama-3-8b-instruct.Q4_K_M.gguf',
         model_type="llama",
         max_new_tokens=512,
         temperature=0.1

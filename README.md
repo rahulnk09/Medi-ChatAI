@@ -13,7 +13,8 @@ The AI Medical Consultant is an advanced chatbot designed to provide accurate me
 
 ### Model Configuration
 
-- **Language Model:** The project employs the quantized version of LLaMA-2, specifically `llama-2-7b-chat.ggmlv3.q3_K_M.bin`, configured with a reduced temperature setting for generating coherent and contextually appropriate responses.
+- **Language Model:** The project employs Google's Gemma model, specifically `google/gemma-2b-it` (instruction-tuned version), using HuggingFace Transformers. This provides more powerful and up-to-date natural language processing capabilities compared to the previous LLaMA-2 implementation.
+- **Fallback Models:** The system includes fallback models for scenarios where the primary Gemma model is unavailable, ensuring robust operation.
 - **Custom Prompting:** A tailored prompt template enhances the query handling by structuring user inputs and model responses effectively.
 
 ### Interface and Interaction
@@ -30,8 +31,9 @@ The AI Medical Consultant is an advanced chatbot designed to provide accurate me
 ### Requirements
 
 - Python 3.8+
-- Libraries: Langchain, CTransformers, FAISS, Chainlit, sentence_transformers
-- Download the suitable quantized LLM based on your RAM capacities from Hugging Face: [Llama-2-7B-Chat-GGML](https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/tree/main)
+- Libraries: Langchain, HuggingFace Transformers, FAISS, Chainlit, sentence_transformers
+- GPU recommended for optimal performance with Gemma model (CPU fallback available)
+- Internet connection required for initial model download from HuggingFace Hub
 
 ### Installation
 
